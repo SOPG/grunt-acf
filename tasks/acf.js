@@ -23,7 +23,7 @@ module.exports = function(grunt){
 				pwd: options.password
 			})
 			.end(function(err, res1){
-				
+				if(err) throw err;
 				var $ = cheerio.load(res1.text);
 
 				// was the login succesful ?
@@ -41,11 +41,15 @@ module.exports = function(grunt){
 					.set('Origin', "http://"+options.baseUrl)
 					.set('Referer', "http://"+options.baseUrl + '/wp-login.php')
 					.end(function(err, res2){
+						if(err) throw err;
+
 						var $ = cheerio.load(res2.text);
 						var nonce = $('#wpbody-content .wrap form input[name="nonce"]');
 						var posts = $('form table select').children();
 						posts = posts.map(function(i, el){ return el.attribs.value; });
 						
+						console.log(res2.status);
+
 						// #WTF? why are we on the login page?
 						if( $('#loginform').length === 1 ){
 							// could be misconfigured.
