@@ -1,0 +1,39 @@
+{
+  "name": "grunt-acf",
+  "description": "exports Advanced Custom Fields to PHP",
+  "version": "0.1.1a",
+  "homepage": "https://github.com/moolen/grunt-acf",
+  "author": {
+    "name": "Moritz Beller",
+    "url": "http://moolen.de/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/moolen/grunt-acf"
+  },
+  "bugs": {
+    "url": "https://github.com/moolen/grunt-acfissues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/moolen/grunt-acfblob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "Gruntfile.js",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "devDependencies": {
+    "superagent": "",
+    "cheerio": "",
+    "grunt": ""
+  },
+  "peerDependencies": {
+    "grunt": "~0.4.0"
+  },
+  "keywords": [
+    "gruntplugin"
+  ],
+  "readmeFilename": "README.md"
+}
