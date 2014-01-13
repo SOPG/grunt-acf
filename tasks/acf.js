@@ -65,7 +65,7 @@ module.exports = function(grunt){
 							i = 0;
 							while(true){
 								if(posts[i]){
-									console.log("adding post #"+posts[i]);
+									console.log("...adding post #"+posts[i]);
 									postString += encodeURIComponent("acf_posts[]="+posts[i])+"&";
 									//console.log('adding: ' + posts[i]);
 
