@@ -2,22 +2,21 @@
   "name": "grunt-acf",
   "description": "exports Advanced Custom Fields to PHP",
   "version": "0.1.2",
-  "homepage": "https://github.com/moolen/grunt-acf",
+  "homepage": "https://github.com/SOPG/grunt-acf",
   "author": {
-    "name": "Moritz Beller",
-    "url": "http://moolen.de/"
+    "name": "Moritz Beller"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/moolen/grunt-acf"
+    "url": "git://github.com/SOPG/grunt-acf"
   },
   "bugs": {
-    "url": "https://github.com/moolen/grunt-acfissues"
+    "url": "https://github.com/SOPG/grunt-acf/issues"
   },
   "licenses": [
     {
       "type": "MIT",
-      "url": "https://github.com/moolen/grunt-acfblob/master/LICENSE-MIT"
+      "url": "https://github.com/SOPG/grunt-acf/blob/master/LICENSE.txt"
     }
   ],
   "main": "Gruntfile.js",
