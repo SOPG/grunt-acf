@@ -25,9 +25,10 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	// for the wp-backend, acf-settings page,
 	// plugin page etc.
 	this.routes = {
-		'login' : '/wp-login.php',
-		'plugin' : '/wp-admin/plugins.php',
-		'legacyAcfForm' : '/wp-admin/edit.php?post_type=acf&page=acf-export'
+		'login':			'/wp-login.php',
+		'plugin':			'/wp-admin/plugins.php',
+		'acfForm':			'/wp-admin/edit.php?post_type=acf&page=acf-export',
+		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export'
 	};
 
 	// the agent stores a cookie
@@ -51,8 +52,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	this.run = function(){
 		self.login()
 			.then(self.getPluginVersion)
-			.then(self.getAcfForm)
-			.then(self.submitAcfForm)
+			.then(self.requestForm)
+			.then(self.submitForm)
 			.then(self.writeExportCode)
 			.then(self.gruntDone);
 	};
@@ -150,7 +151,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * and checks which version to use
 	 * @return {promise}
 	 */
-	this.getAcfForm = function(){
+	this.requestForm = function(){
 		
 		if( self.acfVersion && self.acfVersion[0] >= 5 ){
 			return self.getExportForm();
@@ -164,43 +165,48 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	};
 
 	/**
-	 * submits the Acf form
-	 * and checks which version to use
-	 * 
-	 * @return {promise}
-	 */
-	this.submitAcfForm = function(){
-		if( self.acfVersion && self.acfVersion[0] >= 5 ){
-			return self.submitExportForm();
-		}
-
-		if( self.acfVersion && self.acfVersion[0] < 5 ){
-			return self.submitLegacyExportform();
-		}
-
-		throw "got no valid acf version";
-	};
-
-	/**
 	 * gets the export form
 	 * for v5.0 and higher
 	 * @return {promise}
 	 */
 	this.getExportForm = function(){
 		var deferred = Q.defer();
-		throw "implement new \"get export form\"";
-		return deferred.promise;
-	};
+		
+		if( false === self.isLoggedIn ){
+			throw "you need to login first";
+		}
 
-	/**
-	 * submits the export form
-	 * for v5.0 and higher
-	 * @todo  implement new export form submission
-	 * @return {promise}
-	 */
-	this.submitExportForm = function(){
-		var deferred = Q.defer();
-		throw "implement new export form submission";
+		self.agent.get(self.origin + self.routes.acfForm)
+		.set('Host', self.options.baseUrl)
+		.set('Origin', self.origin)
+		.set('Referer', self.origin + self.routes.login)
+		.end(function(err, res){
+			if(err) throw err;
+
+			var $ = cheerio.load(res.text),
+				nonce = $('input[name="_acfnonce"]'),
+				posts = $('#acf-export-field-groups input[name="acf_export_keys[]"]'),
+				submitMessage = $('input[name="generate"]')[0].attribs.value;
+
+			if( true === self.findLoginForm($) ){
+				throw "the login-form is not supposed to be at the acf-settings page";
+			}
+
+			if( 0 === nonce.length ){
+				throw "no nonce found @ACF Export page";
+			}
+
+			if( 0 === posts.length ){
+				throw "no posts found @ ACF Export page";
+			}
+
+			nonce = nonce[0].attribs.value;
+
+			self.acfFormBody = self.buildAcfExportFormbody(nonce, posts, submitMessage);
+
+			deferred.resolve();
+		});
+
 		return deferred.promise;
 	};
 
@@ -236,11 +242,41 @@ module.exports = function( opts, gruntContext, TaskContext ){
 
 			nonce = nonce[0].attribs.value;
 
-			self.acfFormBody = self.buildAcfExportForm(nonce, posts);
+			self.acfFormBody = self.buildLegacyAcfExportFormbody(nonce, posts);
 
 			deferred.resolve();
 		});
 
+		return deferred.promise;
+	};
+
+	/**
+	 * submits the Acf form
+	 * and checks which version to use
+	 * 
+	 * @return {promise}
+	 */
+	this.submitForm = function(){
+		if( self.acfVersion && self.acfVersion[0] >= 5 ){
+			return self.submitExportForm();
+		}
+
+		if( self.acfVersion && self.acfVersion[0] < 5 ){
+			return self.submitLegacyExportform();
+		}
+
+		throw "got no valid acf version";
+	};
+
+	/**
+	 * submits the export form
+	 * for v5.0 and higher
+	 * @todo  implement new export form submission
+	 * @return {promise}
+	 */
+	this.submitExportForm = function(){
+		var deferred = Q.defer();
+		throw "implement new export form submission";
 		return deferred.promise;
 	};
 
@@ -343,6 +379,13 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		return false;
 	};
 
+	/**
+	 * parses the version number from a string
+	 * returns an array containing the matched version digits
+	 * 
+	 * @param  {string} text
+	 * @return {array}
+	 */
 	this.parseAcfVersionNumber = function( text ){
 		text.match(/\d+\.\d+\.\d+/);
 		
@@ -352,8 +395,35 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		throw 'could not parse acf version number';
 	};
 
-	this.buildAcfExportForm = function( nonce, nodes ){
+	this.buildAcfExportFormbody = function(nonce, nodes, generate){
+		generate = generate || "Erstelle+Export+Code";
+		var body = '_acfnonce=' + nonce + '&acf_export_keys=&';
 
+		// get all posts' values
+		posts = posts.map(function(i, el){
+			return el.attribs.value;
+		});
+
+		// for each post: append to formBody
+		posts.forEach(i, el){
+			body += encodeURIComponent("acf_export_keys[]=" + post ) + "&";
+			self.log('adding post #' + post);
+		};
+
+		body += "&generate=" + generate;
+
+		return body;
+
+	};
+
+	/**
+	 * builds the submission form
+	 * @param  {string} nonce
+	 * @param  {cherrio node array} nodes
+	 * @return {[type]}
+	 */
+	this.buildLegacyAcfExportFormbody = function( nonce, nodes, submit ){
+		submit = submit || "Export+als+PHP";
 		var body = "nonce=" + nonce + "&acf_posts=&";
 
 		// get all posts' values
@@ -364,9 +434,12 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		// for each post: append to formBody
 		posts.forEach(i, el){
 			body += encodeURIComponent("acf_posts[]=" + post ) + "&";
+			self.log('adding post #' + post);
 		};
 
-		body += "&export_to_php=Export+als+PHP";
+		body += "&export_to_php=" + submit;
+
+		return body;
 	};
 
 	this.run();
