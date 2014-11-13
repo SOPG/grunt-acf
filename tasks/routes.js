@@ -31,6 +31,17 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export'
 	};
 
+	this.errors = {
+		'needLogin': 'You need to login first',
+		'couldNotLogin': 'could not login',
+		'pluginNotInstalled': 'ACF plugin is not installed',
+		'needValidPluginVersion': 'Got no valid acf version',
+		'notExpectedLoginForm': 'Not expected login form found (Login session potentially timed out)',
+		'noNonceFound': 'No nonce found @ACF Export page',
+		'noExportPostsFound': 'No posts found @ACF Export page',
+		'noTextareaFound': 'no textarea containing export-code found inside ACF-Export page'
+	};
+
 	// the agent stores a cookie
 	// this is why we only want one agent
 	this.agent = http.agent();
@@ -95,7 +106,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			// if login form appears again:
 			// the login was not successful
 			if( true === self.findLoginForm($) ){
-				throw "could not login";
+				throw self.errors.couldNotLogin;
 			}
 			self.log('successful login');
 			self.isLoggedIn = true;
@@ -115,7 +126,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
-			throw "Need to login first.";
+			throw self.errors.needLogin;
 		}
 
 		self.agent.get( self.origin + self.routes.plugin )
@@ -129,7 +140,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 				currentAcf = $('#advanced-custom-fields-pro .plugin-version-author-uri').text();
 
 			if( 0 === currentAcf.length && 0 === legacyAcf.length ){
-				throw "ACF plugin is not installed";
+				throw self.errors.pluginNotInstalled;
 			}
 
 			if( currentAcf.length ){
@@ -161,7 +172,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			return self.getLegacyExportForm();
 		}
 
-		throw "got no valid acf version";
+		throw self.erros.needValidPluginVersion;
 	};
 
 	/**
@@ -173,7 +184,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var deferred = Q.defer();
 		
 		if( false === self.isLoggedIn ){
-			throw "you need to login first";
+			throw self.errors.needLogin;
 		}
 
 		self.agent.get(self.origin + self.routes.acfForm)
@@ -189,15 +200,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 				submitMessage = $('input[name="generate"]')[0].attribs.value;
 
 			if( true === self.findLoginForm($) ){
-				throw "the login-form is not supposed to be at the acf-settings page";
+				throw self.errors.notExpectedLoginForm;
 			}
 
 			if( 0 === nonce.length ){
-				throw "no nonce found @ACF Export page";
+				throw self.errors.noNonceFound;
 			}
 
 			if( 0 === posts.length ){
-				throw "no posts found @ ACF Export page";
+				throw self.erros.noExportPostsFound;
 			}
 
 			nonce = nonce[0].attribs.value;
@@ -214,7 +225,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
-			throw "you need to login first";
+			throw self.errors.needLogin;
 		}
 
 		self.agent.get(self.origin + self.routes.legacyAcfForm)
@@ -229,15 +240,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 				posts = $('form table select').children();
 
 			if( true === self.findLoginForm($) ){
-				throw "the login-form is not supposed to be at the acf-settings page";
+				throw self.errors.notExpectedLoginForm;
 			}
 
 			if( 0 === nonce.length ){
-				throw "no nonce found @ACF Export page";
+				throw self.errors.noNonceFound;
 			}
 
 			if( 0 === posts.length  ){
-				throw "no posts found @ ACF Export page";
+				throw self.erros.noExportPostsFound;
 			}
 
 			nonce = nonce[0].attribs.value;
@@ -265,7 +276,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			return self.submitLegacyExportform();
 		}
 
-		throw "got no valid acf version";
+		throw self.errors.needValidPluginVersion;
 	};
 
 	/**
@@ -276,7 +287,30 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 */
 	this.submitExportForm = function(){
 		var deferred = Q.defer();
-		throw "implement new export form submission";
+		
+		if( false === self.isLoggedIn){
+			throw self.errors.needLogin;
+		}
+
+		self.agent.post(self.origin + self.routes.acfForm)
+		.type('form')
+		.send(self.acfFormBody)
+		.end(function(err, res){
+			if(err) throw err;
+
+			var $ = cheerio.load(res.text),
+				textarea = $('#wpbody-content textarea');
+
+			if( 0 === textarea.length ){
+				throw self.errors.noTextareaFound;
+			}
+
+			self.exportContent = "<?php \n" + textarea.text();
+
+			self.activateAddons();
+
+		});
+
 		return deferred.promise;
 	};
 
@@ -284,65 +318,24 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
-			throw "you need to login first";
+			throw self.errors.needLogin;
 		}
 
-		self.agent.post(self.origin + self.routes.legacyExportForm)
+		self.agent.post(self.origin + self.routes.legacyAcfForm)
 		.type('form')
 		.send(self.acfFormBody)
 		.end(function(err, res){
 			if(err) throw err;
 
 			var $ = cheerio.load(res.text),
-				textarea = $('#wpbody-content textarea'),
-				phpExportContent = "<?php \n" + textarea.text();
+				textarea = $('#wpbody-content textarea');
 
 				if( textarea.length === 0 ){
-					throw "no textarea containing export-code found inside ACF-Export page";
+					throw self.errors.noTextareaFound;
 				}
 
-				/**
-				 * optional: activate addons 
-				 */
-				if( self.options.addons ){
-					self.log('activating addons');
-
-					// replace repeater
-					options.addons.repeater ?
-						phpExportContent = phpExportContent.replace(
-							"// include_once('add-ons/acf-repeater/acf-repeater.php');",
-							"include_once( ABSPATH . '/wp-content/plugins/acf-repeater/acf-repeater.php');")
-						: '';
-
-					// gallery
-					options.addons.gallery ?
-						phpExportContent = phpExportContent.replace(
-							"// include_once('add-ons/acf-gallery/acf-gallery.php');",
-							"include_once( ABSPATH . '/wp-content/plugins/acf-gallery/acf-gallery.php');")
-						: '';
-					// fc
-					options.addons.flexible ?
-						phpExportContent = phpExportContent.replace(
-							"// include_once('add-ons/acf-flexible-content/acf-flexible-content.php');",
-							"include_once( ABSPATH . '/wp-content/plugins/acf-flexible-content/acf-flexible-content.php');")
-						: '';
-					
-					// options
-					options.addons.options ?
-						phpExportContent = phpExportContent.replace(
-							"// include_once( 'add-ons/acf-options-page/acf-options-page.php' );",
-							"include_once( ABSPATH . '/wp-content/plugins/acf-options-page/acf-options-page.php');")
-						: '';
-				}
-
-				if( self.options.condition ){
-					phpExportContent = phpExportContent.replace(
-						'if(function_exists("register_field_group"))',
-						'if(function_exists("register_field_group") && ' + self.options.condition + ' )'
-					);
-				}
-
-				self.exportContent = phpExportContent;
+				self.exportContent = "<?php \n" + textarea.text();
+				self.activateAddons();
 
 				deferred.resolve();
 
@@ -377,6 +370,61 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			return true;
 		}
 		return false;
+	};
+
+	/**
+	 * activates the addons
+	 */
+	this.activateAddons = function(){
+
+		/**
+		 * optional: activate addons 
+		 */
+		if( self.options.addons ){
+			self.log('activating addons');
+
+			// replace repeater
+			self.options.addons.repeater ?
+				self.exportContent = self.exportContent.replace(
+					"// include_once('add-ons/acf-repeater/acf-repeater.php');",
+					"include_once( ABSPATH . '/wp-content/plugins/acf-repeater/acf-repeater.php');")
+				: '';
+
+			// gallery
+			self.options.addons.gallery ?
+				self.exportContent = self.exportContent.replace(
+					"// include_once('add-ons/acf-gallery/acf-gallery.php');",
+					"include_once( ABSPATH . '/wp-content/plugins/acf-gallery/acf-gallery.php');")
+				: '';
+			// fc
+			self.options.addons.flexible ?
+				self.exportContent = self.exportContent.replace(
+					"// include_once('add-ons/acf-flexible-content/acf-flexible-content.php');",
+					"include_once( ABSPATH . '/wp-content/plugins/acf-flexible-content/acf-flexible-content.php');")
+				: '';
+			
+			// options
+			self.options.addons.options ?
+				self.exportContent = self.exportContent.replace(
+					"// include_once( 'add-ons/acf-options-page/acf-options-page.php' );",
+					"include_once( ABSPATH . '/wp-content/plugins/acf-options-page/acf-options-page.php');")
+				: '';
+		}
+
+		if( self.options.condition ){
+
+			// legacy
+			self.exportContent = self.exportContent.replace(
+				'if(function_exists("register_field_group"))',
+				'if(function_exists("register_field_group") && ' + self.options.condition + ' )'
+			);
+
+			// current
+			self.exportContent = self.exportContent.replace(
+				"if( function_exists('register_field_group') ):",
+				"if( function_exists('register_field_group') && " + self.options.condition + " )"
+			);
+		}
 	};
 
 	/**
