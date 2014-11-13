@@ -57,7 +57,7 @@ The Path to your export file
 Type: `String`
 default `none`
 
-You can add extra-loading logic to ACF Export. It has to be valid PHP. It will be rendered inside if brackets. `if( <condition>){ [..ACF Fields..] }`
+You can add extra-loading logic to your Export file. It has to be valid PHP and it will be rendered inside the if brackets like so: `if( <condition>){ [..ACF Fields..] }`
 
 ```js
 options: {
