@@ -31,7 +31,9 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export'
 	};
 
+	// object containing static error messages
 	this.errors = {
+		'missingContext': 'Options are incomplete or grunt-context is missing',
 		'needLogin': 'You need to login first',
 		'couldNotLogin': 'could not login',
 		'pluginNotInstalled': 'ACF plugin is not installed',
@@ -44,6 +46,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 
 	// the agent stores a cookie
 	// this is why we only want one agent
+	// ..yeah we could do a little bit more async
+	// but performance does not matter in the first place 
 	this.agent = http.agent();
 
 	// shortcut to console log
@@ -54,6 +58,11 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	this.acfVersion = false;
 	this.exportContent = null;
 	this.acfFormBody = null;
+
+	// guard basic stuff
+	if( !opts || !gruntContext || !TaskContext ){
+		throw this.errors.missingContext;
+	}
 
 	/**
 	 * this function initiates the routes
@@ -221,6 +230,10 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		return deferred.promise;
 	};
 
+	/**
+	 * GETs the legacy export form and computes the HTTP Body for the POST request
+	 * @return {promise}
+	 */
 	this.getLegacyExportForm = function(){
 		var deferred = Q.defer();
 
@@ -314,6 +327,11 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		return deferred.promise;
 	};
 
+	/**
+	 * submits the legacy export form
+	 * using HTTP body built before
+	 * @return {promise}
+	 */
 	this.submitLegacyExportform = function(){
 		var deferred = Q.defer();
 
@@ -344,6 +362,10 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		return deferred.promise;
 	};
 
+	/**
+	 * writes the export code to the defined file
+	 * @return {promise}
+	 */
 	this.writeExportCode = function(){
 		var deferred = Q.defer();
 		deferred.resolve();
@@ -374,6 +396,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 
 	/**
 	 * activates the addons
+	 * @modifies self.exportContent
 	 */
 	this.activateAddons = function(){
 
@@ -443,6 +466,13 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		throw 'could not parse acf version number';
 	};
 
+	/**
+	 * builds up the HTTP Body for the POST request
+	 * @param  {string} nonce
+	 * @param  {cheerio node array} nodes
+	 * @param  {string} generate
+	 * @return {string}
+	 */
 	this.buildAcfExportFormbody = function(nonce, nodes, generate){
 		generate = generate || "Erstelle+Export+Code";
 		var body = '_acfnonce=' + nonce + '&acf_export_keys=&';
@@ -468,7 +498,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * builds the submission form
 	 * @param  {string} nonce
 	 * @param  {cherrio node array} nodes
-	 * @return {[type]}
+	 * @param  {string} submit
+	 * @return {string}
 	 */
 	this.buildLegacyAcfExportFormbody = function( nonce, nodes, submit ){
 		submit = submit || "Export+als+PHP";
