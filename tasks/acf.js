@@ -5,8 +5,7 @@ module.exports = function(grunt){
 
 	// the main task
 	grunt.registerMultiTask('acf', 'exports ACF fields', function(){
-		var gruntDone = this.async(),
-			self = this,
+		var	self = this,
 			options = this.options({
 				encoding: grunt.file.defaultEncoding,
 			});

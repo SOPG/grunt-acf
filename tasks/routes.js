@@ -478,15 +478,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var body = '_acfnonce=' + nonce + '&acf_export_keys=&';
 
 		// get all posts' values
-		posts = posts.map(function(i, el){
+		nodes = nodes.map(function(i, el){
 			return el.attribs.value;
 		});
 
 		// for each post: append to formBody
-		posts.forEach(i, el){
-			body += encodeURIComponent("acf_export_keys[]=" + post ) + "&";
-			self.log('adding post #' + post);
-		};
+		nodes.forEach(function(i, el){
+			body += encodeURIComponent("acf_export_keys[]=" + el ) + "&";
+			self.log('adding post #' + el);
+		});
 
 		body += "&generate=" + generate;
 
@@ -506,15 +506,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var body = "nonce=" + nonce + "&acf_posts=&";
 
 		// get all posts' values
-		posts = posts.map(function(i, el){
+		nodes = nodes.map(function(i, el){
 			return el.attribs.value;
 		});
 
 		// for each post: append to formBody
-		posts.forEach(i, el){
-			body += encodeURIComponent("acf_posts[]=" + post ) + "&";
-			self.log('adding post #' + post);
-		};
+		nodes.forEach(function(i, el){
+			body += encodeURIComponent("acf_posts[]=" + el ) + "&";
+			self.log('adding post #' + el);
+		});
 
 		body += "&export_to_php=" + submit;
 
