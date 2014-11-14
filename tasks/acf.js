@@ -1,7 +1,7 @@
 module.exports = function(grunt){
-	var	http = require('superagent'),
-		Routes = require('./routes.js');
-		cheerio = require('cheerio');
+	'use strict';
+
+	var	Routes = require('./lib/routes.js');
 
 	// the main task
 	grunt.registerMultiTask('acf', 'exports ACF fields', function(){

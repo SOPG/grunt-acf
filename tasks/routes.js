@@ -27,8 +27,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	this.routes = {
 		'login':			'/wp-login.php',
 		'plugin':			'/wp-admin/plugins.php',
-		'acfForm':			'/wp-admin/edit.php?post_type=acf&page=acf-export',
-		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export'
+		'acfForm':			'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export',
+		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf&page=acf-export'
 	};
 
 	// object containing static error messages
@@ -41,7 +41,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		'notExpectedLoginForm': 'Not expected login form found (Login session potentially timed out)',
 		'noNonceFound': 'No nonce found @ACF Export page',
 		'noExportPostsFound': 'No posts found @ACF Export page',
-		'noTextareaFound': 'no textarea containing export-code found inside ACF-Export page'
+		'noTextareaFound': 'no textarea containing export-code found inside ACF-Export page',
+		'couldNotParseVersion': 'could not parse acf version number'
 	};
 
 	// the agent stores a cookie
@@ -115,6 +116,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			// if login form appears again:
 			// the login was not successful
 			if( true === self.findLoginForm($) ){
+				self.log( res.status );
+				self.log( res.text );
 				throw self.errors.couldNotLogin;
 			}
 			self.log('successful login');
@@ -153,14 +156,16 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			}
 
 			if( currentAcf.length ){
-				self.log('no current version found');
+				self.log('found new version string');
 				self.acfVersion = self.parseAcfVersionNumber( currentAcf );
 			}else{
-				self.log('using legacy version');
+				self.log('found legacy version string');
 				self.acfVersion = self.parseAcfVersionNumber( legacyAcf );
 			}
 
-			promise.resolve();
+			self.log('found version ACF v' + self.acfVersion.join('.'));
+
+			deferred.resolve();
 		});
 
 		return deferred.promise;
@@ -248,7 +253,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		.end(function(err, res){
 			if(err) throw err;
 
-			var $ = cherrio.load(res.text),
+			var $ = cheerio.load(res.text),
 				nonce = $('#wpbody-content .wrap form input[name="nonce"]'),
 				posts = $('form table select').children();
 
@@ -257,6 +262,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			}
 
 			if( 0 === nonce.length ){
+				self.log(res.text);
+				self.log(nonce);
 				throw self.errors.noNonceFound;
 			}
 
@@ -348,14 +355,14 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			var $ = cheerio.load(res.text),
 				textarea = $('#wpbody-content textarea');
 
-				if( textarea.length === 0 ){
-					throw self.errors.noTextareaFound;
-				}
+			if( textarea.length === 0 ){
+				throw self.errors.noTextareaFound;
+			}
 
-				self.exportContent = "<?php \n" + textarea.text();
-				self.activateAddons();
+			self.exportContent = "<?php \n" + textarea.text();
+			self.activateAddons();
 
-				deferred.resolve();
+			deferred.resolve();
 
 		});
 
@@ -370,7 +377,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		var deferred = Q.defer();
 		deferred.resolve();
 		self.log( 'writing to file: ' + task.files[0].dest );
-		self.log( 'wrote ' + self.exportContent.split('\n').length + 'lines' );
+		self.log( 'wrote ' + self.exportContent.split('\n').length + ' lines' );
 		grunt.file.write(task.files[0].dest, self.exportContent);
 
 		return deferred.promise;
@@ -389,9 +396,9 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 */
 	this.findLoginForm = function( $ ){
 		if( $('#loginform').length === 0){
-			return true;
+			return false;
 		}
-		return false;
+		return true;
 	};
 
 	/**
@@ -435,7 +442,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		}
 
 		if( self.options.condition ){
-
+			self.log('adding conditions');
 			// legacy
 			self.exportContent = self.exportContent.replace(
 				'if(function_exists("register_field_group"))',
@@ -458,12 +465,13 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * @return {array}
 	 */
 	this.parseAcfVersionNumber = function( text ){
-		text.match(/\d+\.\d+\.\d+/);
+		var matched = text.match(/\d+\.\d+\.\d+/);
 		
-		if( text.length > 0 && 3 === text[0].split('.').length ){
-			return text[0].split('.');
+		if( matched.length > 0 && 3 === matched[0].split('.').length ){
+			return matched[0].split('.');
 		}
-		throw 'could not parse acf version number';
+		self.log('could find version number in string: "' + text + '"');
+		throw self.errors.couldNotParseVersion;
 	};
 
 	/**
@@ -483,10 +491,11 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		});
 
 		// for each post: append to formBody
-		nodes.forEach(function(i, el){
+		for( var i = 0; i < nodes.length; i++ ){
+			var el = nodes[i];
 			body += encodeURIComponent("acf_export_keys[]=" + el ) + "&";
 			self.log('adding post #' + el);
-		});
+		}
 
 		body += "&generate=" + generate;
 
@@ -511,10 +520,12 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		});
 
 		// for each post: append to formBody
-		nodes.forEach(function(i, el){
+		// for each post: append to formBody
+		for( var i = 0; i < nodes.length; i++ ){
+			var el = nodes[i];
 			body += encodeURIComponent("acf_posts[]=" + el ) + "&";
 			self.log('adding post #' + el);
-		});
+		}
 
 		body += "&export_to_php=" + submit;
 
