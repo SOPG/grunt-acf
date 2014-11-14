@@ -1,8 +1,6 @@
 # grunt-acf
 
-> Exports [AdvancedCustomFields](http://www.advancedcustomfields.com/) to PHP. Grunt acts like a headless browser to fetch the export code and puts it into your destination file
-
-
+> Exports [AdvancedCustomFields](http://www.advancedcustomfields.com/) to PHP. Grunt acts like a headless browser to fetch the export code and puts it into your destination file. Now also supports ACF 5.0 and higher.
 
 ## Getting Started
 This plugin requires Grunt `~0.4.0`
@@ -18,9 +16,6 @@ Once the plugin has been installed, it may be enabled inside your Gruntfile with
 ```js
 grunt.loadNpmTasks('grunt-acf');
 ```
-
-
-*This plugin was designed to work with Grunt 0.4.x. If you're still using grunt v0.3.x it's strongly recommended that [you upgrade](http://gruntjs.com/upgrading-from-0.3-to-0.4), but in case you can't please use [v0.3.2](https://github.com/gruntjs/grunt-contrib-copy/tree/grunt-0.3-stable).*
 
 ## acf task
 _Run this task with the `grunt acf` command._
@@ -62,14 +57,14 @@ The Path to your export file
 Type: `String`
 default `none`
 
-You can add extra-loading logic to ACF Export. It has to be valid PHP. It will be rendered inside if brackets. `if( <condition>){ [..ACF Fields..] }`
+You can add extra-loading logic to your Export file. It has to be valid PHP and it will be rendered inside the if brackets like so: `if( <condition>){ [..ACF Fields..] }`
 
 ```js
 options: {
 	baseUrl: 'myproject.dev',
 	user: 'wpAdminUser',
 	password: 'wpAdminPW123!!11',
-	condition: "defined('my_environment') && my_environment === 'live'",
+	condition: "defined('APPLICATION_MODE') && APPLICATION_MODE === 'live'",
 	addons: {
 		repeater: true,
 		gallery: true,
@@ -77,5 +72,5 @@ options: {
 		options: true,
 	}
 },
-dest: '<%= cfg.themeDir %>/library/acf-export.php'
+dest: 'path/to/my/acf-export.php'
 ```
