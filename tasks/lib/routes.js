@@ -311,7 +311,6 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		if( false === self.isLoggedIn){
 			throw self.errors.needLogin;
 		}
-
 		self.agent.post(self.origin + self.routes.acfForm)
 		.type('form')
 		.send(self.acfFormBody)
@@ -328,6 +327,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			self.exportContent = "<?php \n" + textarea.text();
 
 			self.activateAddons();
+
+			deferred.resolve();
 
 		});
 
@@ -493,7 +494,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		// for each post: append to formBody
 		for( var i = 0; i < nodes.length; i++ ){
 			var el = nodes[i];
-			body += encodeURIComponent("acf_export_keys[]=" + el ) + "&";
+			body += encodeURIComponent("acf_export_keys[]") + "=" + el + "&";
 			self.log('adding post #' + el);
 		}
 
