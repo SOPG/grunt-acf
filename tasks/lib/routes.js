@@ -453,7 +453,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			// current
 			self.exportContent = self.exportContent.replace(
 				"if( function_exists('register_field_group') ):",
-				"if( function_exists('register_field_group') && " + self.options.condition + " )"
+				"if( function_exists('register_field_group') && " + self.options.condition + " ):"
 			);
 		}
 	};
