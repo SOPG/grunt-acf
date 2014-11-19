@@ -1,7 +1,7 @@
 {
   "name": "grunt-acf",
   "description": "exports Advanced Custom Fields to PHP",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "homepage": "https://github.com/SOPG/grunt-acf",
   "author": {
     "name": "Moritz Beller"
