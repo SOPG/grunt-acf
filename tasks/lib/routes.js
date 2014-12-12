@@ -222,7 +222,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			}
 
 			if( 0 === posts.length ){
-				throw self.erros.noExportPostsFound;
+				throw self.errors.noExportPostsFound;
 			}
 
 			nonce = nonce[0].attribs.value;
