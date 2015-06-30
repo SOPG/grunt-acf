@@ -513,23 +513,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 */
 	this.buildLegacyAcfExportFormbody = function( nonce, nodes, submit ){
 		submit = submit || "Export+als+PHP";
-		var body = "nonce=" + nonce + "&acf_posts=&";
-
-		// get all posts' values
-		nodes = nodes.map(function(i, el){
-			return el.attribs.value;
-		});
-
-		// for each post: append to formBody
-		// for each post: append to formBody
-		for( var i = 0; i < nodes.length; i++ ){
-			var el = nodes[i];
-			body += encodeURIComponent("acf_posts[]=" + el ) + "&";
-			self.log('adding post #' + el);
-		}
-
-		body += "&export_to_php=" + submit;
-
+		var body = "nonce=" + nonce + "&acf_posts=&export_to_php=" + submit;
 		return body;
 	};
 
