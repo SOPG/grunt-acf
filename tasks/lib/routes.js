@@ -2,7 +2,8 @@ var Q = require('q'),
 	http = require('superagent'),
 	cheerio = require('cheerio');
 
-module.exports = function( opts, gruntContext, TaskContext ){
+module.exports = function( opts, gruntContext, TaskContext )
+{
 	'use strict';
 
 	var self = this;
@@ -28,6 +29,7 @@ module.exports = function( opts, gruntContext, TaskContext ){
 		'login':			'/wp-login.php',
 		'plugin':			'/wp-admin/plugins.php',
 		'acfForm':			'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export',
+		'acfToolsForm':		'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-tools',
 		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf&page=acf-export'
 	};
 
@@ -70,7 +72,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * this is called at the end of this constructor fn
 	 * @return {void}
 	 */
-	this.run = function(){
+	this.run = function()
+	{
 		self.login()
 			.then(self.getPluginVersion)
 			.then(self.requestForm)
@@ -89,7 +92,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * logs the user in
 	 * @return {deferred promise}
 	 */
-	this.login = function(){
+	this.login = function()
+	{
 		var deferred = Q.defer();
 
 		// short-circuit if user is already logged in
@@ -134,7 +138,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * gets the plugin version number from the plugin page
 	 * @return {promise}
 	 */
-	this.getPluginVersion = function(){
+	this.getPluginVersion = function()
+	{
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
@@ -156,10 +161,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 			}
 
 			if( currentAcf.length ){
-				self.log('found new version string');
 				self.acfVersion = self.parseAcfVersionNumber( currentAcf );
 			}else{
-				self.log('found legacy version string');
 				self.acfVersion = self.parseAcfVersionNumber( legacyAcf );
 			}
 
@@ -176,7 +179,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * and checks which version to use
 	 * @return {promise}
 	 */
-	this.requestForm = function(){
+	this.requestForm = function()
+	{
 		
 		if( self.acfVersion && self.acfVersion[0] >= 5 ){
 			return self.getExportForm();
@@ -194,14 +198,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * for v5.0 and higher
 	 * @return {promise}
 	 */
-	this.getExportForm = function(){
+	this.getExportForm = function()
+	{
 		var deferred = Q.defer();
 		
 		if( false === self.isLoggedIn ){
 			throw self.errors.needLogin;
 		}
 
-		self.agent.get(self.origin + self.routes.acfForm)
+		self.agent.get(self.getFormUrl())
 		.set('Host', self.options.baseUrl)
 		.set('Origin', self.origin)
 		.set('Referer', self.origin + self.routes.login)
@@ -239,14 +244,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * GETs the legacy export form and computes the HTTP Body for the POST request
 	 * @return {promise}
 	 */
-	this.getLegacyExportForm = function(){
+	this.getLegacyExportForm = function()
+	{
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
 			throw self.errors.needLogin;
 		}
 
-		self.agent.get(self.origin + self.routes.legacyAcfForm)
+		self.agent.get(self.getFormUrl())
 		.set('Host', self.options.baseUrl)
 		.set('Origin', self.origin)
 		.set('Referer', self.origin + self.routes.login)
@@ -287,7 +293,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * 
 	 * @return {promise}
 	 */
-	this.submitForm = function(){
+	this.submitForm = function()
+	{
 		if( self.acfVersion && self.acfVersion[0] >= 5 ){
 			return self.submitExportForm();
 		}
@@ -305,13 +312,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * @todo  implement new export form submission
 	 * @return {promise}
 	 */
-	this.submitExportForm = function(){
+	this.submitExportForm = function()
+	{
 		var deferred = Q.defer();
 		
 		if( false === self.isLoggedIn){
 			throw self.errors.needLogin;
 		}
-		self.agent.post(self.origin + self.routes.acfForm)
+
+		self.agent.post(self.getFormUrl())
 		.type('form')
 		.send(self.acfFormBody)
 		.end(function(err, res){
@@ -340,14 +349,15 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * using HTTP body built before
 	 * @return {promise}
 	 */
-	this.submitLegacyExportform = function(){
+	this.submitLegacyExportform = function()
+	{
 		var deferred = Q.defer();
 
 		if( false === self.isLoggedIn ){
 			throw self.errors.needLogin;
 		}
 
-		self.agent.post(self.origin + self.routes.legacyAcfForm)
+		self.agent.post(self.getFormUrl())
 		.type('form')
 		.send(self.acfFormBody)
 		.end(function(err, res){
@@ -374,7 +384,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * writes the export code to the defined file
 	 * @return {promise}
 	 */
-	this.writeExportCode = function(){
+	this.writeExportCode = function()
+	{
 		var deferred = Q.defer();
 		deferred.resolve();
 		self.log( 'writing to file: ' + task.files[0].dest );
@@ -389,13 +400,41 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * some helper functions are below
 	 * 
 	 */
+	
+	/**
+	 * returns the form url for the set version
+	 * @return {String} 
+	 */
+	this.getFormUrl = function(){
+		if( !self.acfVersion ){
+			throw self.errors.couldNotParseVersion;
+		}
+
+		var url;
+
+		// 5.3 and above
+		url = url = self.origin + self.routes.acfToolsForm;
+
+		// 5.0 - 5.2
+		if( self.acfVersion[0] === 5 && self.acfVersion[1] < 3 ){
+			url = self.origin + self.routes.acfForm;
+		}
+
+		// <5.0 legacy url
+		if( self.acfVersion[0] < 5 ){
+			url = self.origin + self.routes.legacyAcfForm;
+		}
+
+		return url;
+	};
 
 	/**
 	 * finds a login form on a given cheerio context
 	 * @param  {cheerio} $
 	 * @return {bool}
 	 */
-	this.findLoginForm = function( $ ){
+	this.findLoginForm = function( $ )
+	{
 		if( $('#loginform').length === 0){
 			return false;
 		}
@@ -406,7 +445,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * activates the addons
 	 * @modifies self.exportContent
 	 */
-	this.activateAddons = function(){
+	this.activateAddons = function()
+	{
 
 		/**
 		 * optional: activate addons 
@@ -465,7 +505,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * @param  {string} text
 	 * @return {array}
 	 */
-	this.parseAcfVersionNumber = function( text ){
+	this.parseAcfVersionNumber = function( text )
+	{
 		var matched = text.match(/\d+\.\d+\.\d+/);
 		
 		if( matched.length > 0 && 3 === matched[0].split('.').length ){
@@ -482,7 +523,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * @param  {string} generate
 	 * @return {string}
 	 */
-	this.buildAcfExportFormbody = function(nonce, nodes, generate){
+	this.buildAcfExportFormbody = function(nonce, nodes, generate)
+	{
 		generate = generate || "Erstelle+Export+Code";
 		var body = '_acfnonce=' + nonce + '&acf_export_keys=&';
 
@@ -511,7 +553,8 @@ module.exports = function( opts, gruntContext, TaskContext ){
 	 * @param  {string} submit
 	 * @return {string}
 	 */
-	this.buildLegacyAcfExportFormbody = function( nonce, nodes, submit ){
+	this.buildLegacyAcfExportFormbody = function( nonce, nodes, submit )
+	{
 		submit = submit || "Export+als+PHP";
 		var body = "nonce=" + nonce + "&acf_posts=&export_to_php=" + submit;
 		return body;
