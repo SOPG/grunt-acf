@@ -29,10 +29,13 @@
     "cheerio": ""
   },
   "peerDependencies": {
-    "grunt": "~0.4.0"
+    "grunt": ">=0.4.0"
   },
   "keywords": [
-    "gruntplugin", "wordpress", "acf", "advanced custom fields"
+    "gruntplugin",
+    "wordpress",
+    "acf",
+    "advanced custom fields"
   ],
   "readmeFilename": "README.md"
 }
