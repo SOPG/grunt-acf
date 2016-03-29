@@ -18,6 +18,8 @@ module.exports = function( opts, gruntContext, TaskContext )
 	// store grunt options
 	this.options = opts || {};
 
+	this.exportJson = opts.json || false;
+
 	// based on above options
 	// we want to build some shortcuts
 	this.origin = 'http://' + this.options.baseUrl;
@@ -54,7 +56,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 	this.agent = http.agent();
 
 	// shortcut to console log
-	this.log = console.log.bind(console);
+	this.log = grunt.log.writeln;
 
 	// some internal state & properties
 	this.isLoggedIn = false;
@@ -327,15 +329,19 @@ module.exports = function( opts, gruntContext, TaskContext )
 			if(err) throw err;
 
 			var $ = cheerio.load(res.text),
-				textarea = $('#wpbody-content textarea');
+					textarea = $('#wpbody-content textarea');
 
-			if( 0 === textarea.length ){
-				throw self.errors.noTextareaFound;
+			if( self.exportJson === true ){
+				self.exportContent = JSON.stringify(res.body, null, '\t');
+			}else{
+
+				if( 0 === textarea.length ){
+					throw self.errors.noTextareaFound;
+				}
+
+				self.exportContent = "<?php \n" + textarea.text();
+				self.activateAddons();
 			}
-
-			self.exportContent = "<?php \n" + textarea.text();
-
-			self.activateAddons();
 
 			deferred.resolve();
 
@@ -540,7 +546,11 @@ module.exports = function( opts, gruntContext, TaskContext )
 			self.log('adding post #' + el);
 		}
 
-		body += "&generate=" + generate;
+		if( self.exportJson === true ){
+			body += "&download=" + "JSON-Datei exportieren";
+		}else{
+			body += "&generate=" + generate;
+		}
 
 		return body;
 
