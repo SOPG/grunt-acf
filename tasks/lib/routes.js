@@ -155,8 +155,8 @@ module.exports = function( opts, gruntContext, TaskContext )
 		.end(function(err, res){
 
 			var $ = cheerio.load(res.text),
-				legacyAcf = $('#advanced-custom-fields .plugin-version-author-uri').text(),
-				currentAcf = $('#advanced-custom-fields-pro .plugin-version-author-uri').text();
+				legacyAcf = $('#advanced-custom-fields .plugin-version-author-uri, [data-slug="advanced-custom-fields-pro"] .plugin-version-author-uri').text(),
+				currentAcf = $('#advanced-custom-fields-pro .plugin-version-author-uri, [data-slug="advanced-custom-fields"] .plugin-version-author-uri').text();
 
 			if( 0 === currentAcf.length && 0 === legacyAcf.length ){
 				throw self.errors.pluginNotInstalled;
