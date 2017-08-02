@@ -216,7 +216,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 			if(err) throw err;
 
 			var $ = cheerio.load(res.text),
-				nonce = $('input[name="_acfnonce"]'),
+				nonce = $('input[name="' + self.getSelector('_acfnonce') + '"]'),
 				posts = $('#acf-export-field-groups input[name="acf_export_keys[]"]'),
 				submitMessage = $('input[name="generate"]')[0].attribs.value;
 
@@ -532,7 +532,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 	this.buildAcfExportFormbody = function(nonce, nodes, generate)
 	{
 		generate = generate || "Erstelle+Export+Code";
-		var body = '_acfnonce=' + nonce + '&acf_export_keys=&';
+		var body = self.getSelector('_acfnonce') + '=' + nonce + '&acf_export_keys=&';
 
 		// get all posts' values
 		nodes = nodes.map(function(i, el){
@@ -569,6 +569,27 @@ module.exports = function( opts, gruntContext, TaskContext )
 		var body = "nonce=" + nonce + "&acf_posts=&export_to_php=" + submit;
 		return body;
 	};
+    
+        /**
+         * get selector dependend of version
+         * 
+         * @param {type} string
+         * @returns {module.exports.getSelector.identifier}
+         */
+        this.getSelector=function(identifier)
+        {
+            switch(identifier) {
+                case '_acfnonce':
+                    if((self.acfVersion[0]>=5) && (self.acfVersion[1]>=6)) {
+                        identifier='_acf_nonce';
+                    }
+                    break;
+                    
+                default:break;
+            }
+            
+            return identifier;
+        };
 
 	this.run();
 
