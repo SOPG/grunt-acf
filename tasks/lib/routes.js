@@ -28,11 +28,13 @@ module.exports = function( opts, gruntContext, TaskContext )
 	// for the wp-backend, acf-settings page,
 	// plugin page etc.
 	this.routes = {
-		'login':			'/wp-login.php',
-		'plugin':			'/wp-admin/plugins.php',
-		'acfForm':			'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export',
-		'acfToolsForm':		'/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-tools',
-		'legacyAcfForm':	'/wp-admin/edit.php?post_type=acf&page=acf-export'
+		'login':		      '/wp-login.php',
+		'plugin':			  '/wp-admin/plugins.php',
+		'acfForm':			  '/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-export',
+		'acfToolsForm':		  '/wp-admin/edit.php?post_type=acf-field-group&page=acf-settings-tools',
+        /* ACF Tools Form 565 added 2017-11-07 (ACF 5.6.5) */
+        'acfToolsForm565':    '/wp-admin/edit.php?post_type=acf-field-group&page=acf-tools',
+		'legacyAcfForm':	  '/wp-admin/edit.php?post_type=acf&page=acf-export'
 	};
 
 	// object containing static error messages
@@ -183,7 +185,6 @@ module.exports = function( opts, gruntContext, TaskContext )
 	 */
 	this.requestForm = function()
 	{
-		
 		if( self.acfVersion && self.acfVersion[0] >= 5 ){
 			return self.getExportForm();
 		}
@@ -217,8 +218,10 @@ module.exports = function( opts, gruntContext, TaskContext )
 
 			var $ = cheerio.load(res.text),
 				nonce = $('input[name="' + self.getSelector('_acfnonce') + '"]'),
-				posts = $('#acf-export-field-groups input[name="acf_export_keys[]"]'),
-				submitMessage = $('input[name="generate"]')[0].attribs.value;
+                //posts = $('#acf-export-field-groups input[name="acf_export_keys[]"]'),
+				posts = $(self.getSelector('_field_groups')),
+				//submitMessage = $('input[name="generate"]')[0].attribs.value;
+   				submitMessage = $(self.getSelector('_generate'))[0].attribs.value;
 
 			if( true === self.findLoginForm($) ){
 				throw self.errors.notExpectedLoginForm;
@@ -321,18 +324,18 @@ module.exports = function( opts, gruntContext, TaskContext )
 		if( false === self.isLoggedIn){
 			throw self.errors.needLogin;
 		}
-
-		self.agent.post(self.getFormUrl())
-		.type('form')
-		.send(self.acfFormBody)
-		.end(function(err, res){
+        
+        var fnCallback = function(err, res)
+        {
 			if(err) throw err;
-
-			var $ = cheerio.load(res.text),
-					textarea = $('#wpbody-content textarea');
-
+            
+			var $ = cheerio.load(res.text);
+			var textarea = $('#wpbody-content textarea');
+            
 			if( self.exportJson === true ){
+
 				self.exportContent = JSON.stringify(res.body, null, '\t');
+                
 			}else{
 
 				if( 0 === textarea.length ){
@@ -344,8 +347,23 @@ module.exports = function( opts, gruntContext, TaskContext )
 			}
 
 			deferred.resolve();
+		};
+        
+        if (self.acfVersion[0] >= 5
+        && (self.acfVersion[1] >= 6)
+        && (self.acfVersion[2] >= 5)) { // ACF >= 5.6.5 (2017-11-07)
+            
+            self.agent.post(self.getFormUrl() + '&' + self.acfFormBody)
+            .type('form')           
+            .end(fnCallback);
+            
+        } else { // ACF <= 5.6.4
 
-		});
+            self.agent.post(self.getFormUrl())
+            .type('form')
+            .send(self.acfFormBody)
+            .end(fnCallback);
+        }
 
 		return deferred.promise;
 	};
@@ -369,8 +387,8 @@ module.exports = function( opts, gruntContext, TaskContext )
 		.end(function(err, res){
 			if(err) throw err;
 
-			var $ = cheerio.load(res.text),
-				textarea = $('#wpbody-content textarea');
+			var $ = cheerio.load(res.text);
+            var textarea = $('#wpbody-content textarea');
 
 			if( textarea.length === 0 ){
 				throw self.errors.noTextareaFound;
@@ -411,26 +429,39 @@ module.exports = function( opts, gruntContext, TaskContext )
 	 * returns the form url for the set version
 	 * @return {String} 
 	 */
-	this.getFormUrl = function(){
+	this.getFormUrl = function()
+    {
 		if( !self.acfVersion ){
 			throw self.errors.couldNotParseVersion;
 		}
 
-		var url;
+		var url = '';
 
-		// 5.3 and above
-		url = url = self.origin + self.routes.acfToolsForm;
+        // 5.6.5+ (2017-11-07)
+        if (parseInt(self.acfVersion[0]) >= 5 
+        && (parseInt(self.acfVersion[1]) >= 6) 
+        && (parseInt(self.acfVersion[2]) >= 5)) {
+            url = '' + self.origin + self.routes.acfToolsForm565;
+        }
+        
+		// 5.3 - 5.6.4
+        if (parseInt(self.acfVersion[0]) === 5 
+        && (parseInt(self.acfVersion[1]) === 6) 
+        && (5 < parseInt(self.acfVersion[2]))) {
+            url = '' + self.origin + self.routes.acfToolsForm;
+        }
 
 		// 5.0 - 5.2
-		if( self.acfVersion[0] === 5 && self.acfVersion[1] < 3 ){
-			url = self.origin + self.routes.acfForm;
+		if (parseInt(self.acfVersion[0]) === 5 
+        && (parseInt(self.acfVersion[1]) < 3 )) {
+			url = '' + self.origin + self.routes.acfForm;
 		}
 
 		// <5.0 legacy url
 		if( self.acfVersion[0] < 5 ){
 			url = self.origin + self.routes.legacyAcfForm;
 		}
-
+        
 		return url;
 	};
 
@@ -532,22 +563,51 @@ module.exports = function( opts, gruntContext, TaskContext )
 	this.buildAcfExportFormbody = function(nonce, nodes, generate)
 	{
 		generate = generate || "Erstelle+Export+Code";
-		var body = self.getSelector('_acfnonce') + '=' + nonce + '&acf_export_keys=&';
+		/* Quoted out 2017-11-07, ACF 5.6.5 */
+        //var body = self.getSelector('_acfnonce') + '=' + nonce + '&acf_export_keys=';
+        var body = self.getSelector('_acfnonce') + '=' + nonce + self.getSelector('_exportUriComponent');
 
-		// get all posts' values
+        // get all posts' values
 		nodes = nodes.map(function(i, el){
 			return el.attribs.value;
 		});
 
-		// for each post: append to formBody
-		for( var i = 0; i < nodes.length; i++ ){
-			var el = nodes[i];
-			body += encodeURIComponent("acf_export_keys[]") + "=" + el + "&";
-			self.log('adding post #' + el);
-		}
+        if (self.acfVersion[0] >= 5 
+        && (self.acfVersion[1] >= 6) 
+        && (self.acfVersion[2] >= 5)) { // ACF 5.6.5+ (2017-11-07)
+            
+            body += 'keys=';
+            for( var i = 0; i < nodes.length; i++ ){
+                var el = nodes[i];
+                body += el + "+";
+                self.log('adding post #' + el);
+            }
+            body = body.substr(0, body.length - 1);
+            
+        } else { // ACF <= 5.6.4
+            
+            // for each post: append to formBody
+            for( var i = 0; i < nodes.length; i++ ){
+                var el = nodes[i];var el = nodes[i];
+                /* Quoted out 2017-11-07, ACF 5.6.5 */
+                //body += encodeURIComponent("acf_export_keys[]") + "=" + el + "&";
+                body += encodeURIComponent(self.getSelector('_keysUriComponent')) + "=" + el + "&";
+                self.log('adding post #' + el);
+            }
+        }
 
 		if( self.exportJson === true ){
-			body += "&download=" + "JSON-Datei exportieren";
+            if (self.acfVersion[0] >= 5 
+            && (self.acfVersion[1] >= 6) 
+            && (self.acfVersion[2] >= 5)) { // ACF 5.6.5+ (2017-11-07)
+                
+                body += "&action=download";
+                
+            } else { // ACF <= 5.6.4
+                
+                body += "&download=" + "JSON-Datei exportieren";
+                
+            }            
 		}else{
 			body += "&generate=" + generate;
 		}
@@ -582,6 +642,70 @@ module.exports = function( opts, gruntContext, TaskContext )
                 case '_acfnonce':
                     if((self.acfVersion[0]>=5) && (self.acfVersion[1]>=6)) {
                         identifier='_acf_nonce';
+                    }
+                    break;
+                    
+                case '_field_groups':
+                    // >= 5.6.5 (2017-11-07)
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] >= 5)) {
+                        identifier = '.acf-fields input[name="keys[]"]';
+                    }
+                    // <= 5.6.4
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] <= 4)) {
+                        identifier = '#acf-export-field-groups input[name="acf_export_keys[]"]';
+                    }
+                    break;
+                 
+                case '_generate':
+                    // >= 5.6.5 (2017-11-07)
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] >= 5)) {
+                        identifier = 'button[name="action"][value="generate"]';
+                    }
+                    // <= 5.6.4
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] <= 4)) {
+                        identifier = 'input[name="generate"]';
+                    }
+                    break;
+                    
+                case '_keysUriComponent':
+                    // >= 5.6.5 (2017-11-07)
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] >= 5)) {
+                        identifier = 'keys[]';
+                    }
+                    // <= 5.6.4
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] <= 4)) {
+                        identifier = 'acf_export_keys[]';
+                    }
+                    break;
+                case '_exportUriComponent':
+                    
+                    // >= 5.6.5 (2017-11-07)
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] >= 5)) {
+                        if (false === self.exportJson) {
+                            identifier = '&tool=export&';
+                        } else {
+                            identifier = '&action=download&';
+                        }
+                    }
+                    // <= 5.6.4
+                    if (self.acfVersion[0] >= 5
+                    && (self.acfVersion[1] >= 6)
+                    && (self.acfVersion[2] <= 4)) {
+                        identifier = '&acf_export_keys=&';
                     }
                     break;
                     
