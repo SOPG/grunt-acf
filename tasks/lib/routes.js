@@ -447,7 +447,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 		// 5.3 - 5.6.4
         if (parseInt(self.acfVersion[0]) === 5 
         && (parseInt(self.acfVersion[1]) === 6) 
-        && (5 < parseInt(self.acfVersion[2]))) {
+        && (parseInt(self.acfVersion[2]) < 5)) {
             url = '' + self.origin + self.routes.acfToolsForm;
         }
 
