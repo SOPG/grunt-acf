@@ -446,8 +446,9 @@ module.exports = function( opts, gruntContext, TaskContext )
         
 		// 5.3 - 5.6.4
         if (parseInt(self.acfVersion[0]) === 5 
-        && (parseInt(self.acfVersion[1]) === 6) 
-        && (parseInt(self.acfVersion[2]) < 5)) {
+        && (parseInt(self.acfVersion[1]) <= 6) 
+        && (parseInt(self.acfVersion[1]) >= 3) 
+        && ((parseInt(self.acfVersion[2]) < 5 && parseInt(self.acfVersion[1]) === 6) || (parseInt(self.acfVersion[1]) < 6))) {            
             url = '' + self.origin + self.routes.acfToolsForm;
         }
 
@@ -653,9 +654,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                         identifier = '.acf-fields input[name="keys[]"]';
                     }
                     // <= 5.6.4
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] <= 4)) {
+                    if (self.acfVersion[0] <= 5
+                    && (self.acfVersion[1] <= 6)
+                    && ((self.acfVersion[2] <= 4 && self.acfVersion[1] === 6) || (self.acfVersion[1] < 6))) {
                         identifier = '#acf-export-field-groups input[name="acf_export_keys[]"]';
                     }
                     break;
@@ -668,9 +669,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                         identifier = 'button[name="action"][value="generate"]';
                     }
                     // <= 5.6.4
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] <= 4)) {
+                    if (self.acfVersion[0] <= 5
+                    && (self.acfVersion[1] <= 6)
+                    && ((self.acfVersion[2] <= 4 && self.acfVersion[1] === 6) || (self.acfVersion[1] < 6))) {
                         identifier = 'input[name="generate"]';
                     }
                     break;
@@ -683,9 +684,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                         identifier = 'keys[]';
                     }
                     // <= 5.6.4
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] <= 4)) {
+                    if (self.acfVersion[0] <= 5
+                    && (self.acfVersion[1] <= 6)
+                    && ((self.acfVersion[2] <= 4 && self.acfVersion[1] === 6) || (self.acfVersion[1] < 6))) {
                         identifier = 'acf_export_keys[]';
                     }
                     break;
@@ -702,9 +703,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                         }
                     }
                     // <= 5.6.4
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] <= 4)) {
+                    if (self.acfVersion[0] <= 5
+                    && (self.acfVersion[1] <= 6)
+                    && ((self.acfVersion[2] <= 4 && self.acfVersion[1] === 6) || (self.acfVersion[1] < 6))) {
                         identifier = '&acf_export_keys=&';
                     }
                     break;
