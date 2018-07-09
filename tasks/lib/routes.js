@@ -333,7 +333,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 			var textarea = $('#wpbody-content textarea');
             
 			if( self.exportJson === true ){
-
+                                
 				self.exportContent = JSON.stringify(res.body, null, '\t');
                 
 			}else{
@@ -349,21 +349,37 @@ module.exports = function( opts, gruntContext, TaskContext )
 			deferred.resolve();
 		};
         
-        if (self.acfVersion[0] >= 5
-        && (self.acfVersion[1] >= 6)
-        && (self.acfVersion[2] >= 5)) { // ACF >= 5.6.5 (2017-11-07)
-            
-            self.agent.post(self.getFormUrl() + '&' + self.acfFormBody)
-            .type('form')           
-            .end(fnCallback);
-            
-        } else { // ACF <= 5.6.4
+                //trigger for request dependend of version, export-type
+                var requestType;
+                switch(true) {
+                    // ACF >= 5.6.10 (2018-04-02) for JSON only
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 6)
+                        && (self.acfVersion[2] >= 5)
+                        && (self.exportJson === true)):
+                    //default as well
+                    default:
+                        
+                        requestType='>=5.6.5::json, default';
+                        self.agent.post(self.getFormUrl())
+                        .type('form')
+                        .send(self.acfFormBody)
+                        .end(fnCallback);
+                        break;
 
-            self.agent.post(self.getFormUrl())
-            .type('form')
-            .send(self.acfFormBody)
-            .end(fnCallback);
-        }
+                    // ACF >= 5.6.5 (2017-11-07)
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 6)
+                        && (self.acfVersion[2] >= 5)):
+                        
+                        requestType='>=5.6.5';
+                        self.agent.post(self.getFormUrl() + '&' + self.acfFormBody)
+                        .type('form')           
+                        .end(fnCallback);
+                        break;
+                }
+                
+                console.log('request-type on submitExportForm: ' + requestType);
 
 		return deferred.promise;
 	};
@@ -572,32 +588,54 @@ module.exports = function( opts, gruntContext, TaskContext )
 		nodes = nodes.map(function(i, el){
 			return el.attribs.value;
 		});
+        
+        //trigger for request dependend of version, export-type
+        var requestType;
+        switch(true) {
+            case ((self.acfVersion[0] >= 5) // ACF>=5.6.10 (2018-04-02) for JSON only
+                && (self.acfVersion[1] >= 6)
+                && (self.acfVersion[2] >= 5)
+                && (self.exportJson === true)):
+                
+                requestType='>=5.6.5::json';
+                body += 'keys=';
+                for( var i = 0; i < nodes.length; i++ ){
+                    var el = nodes[i];
+                    body += '&keys%5B%5D=' + el;
+                    self.log('adding post #' + el);
+                }
+                body = body.substr(0, body.length - 1);
+                break;
+                
+            case ((self.acfVersion[0] >= 5) // ACF>=5.6.5 (2017-11-07)
+                && (self.acfVersion[1] >= 6)
+                && (self.acfVersion[2] >= 5)):
 
-        if (self.acfVersion[0] >= 5 
-        && (self.acfVersion[1] >= 6) 
-        && (self.acfVersion[2] >= 5)) { // ACF 5.6.5+ (2017-11-07)
-            
-            body += 'keys=';
-            for( var i = 0; i < nodes.length; i++ ){
-                var el = nodes[i];
-                body += el + "+";
-                self.log('adding post #' + el);
-            }
-            body = body.substr(0, body.length - 1);
-            
-        } else { // ACF <= 5.6.4
-            
-            // for each post: append to formBody
-            for( var i = 0; i < nodes.length; i++ ){
-                var el = nodes[i];var el = nodes[i];
-                /* Quoted out 2017-11-07, ACF 5.6.5 */
-                //body += encodeURIComponent("acf_export_keys[]") + "=" + el + "&";
-                body += encodeURIComponent(self.getSelector('_keysUriComponent')) + "=" + el + "&";
-                self.log('adding post #' + el);
-            }
+                requestType='>=5.6.5';
+                body += 'keys=';
+                for( var i = 0; i < nodes.length; i++ ){
+                    var el = nodes[i];
+                    body += el + "+";
+                    self.log('adding post #' + el);
+                }
+                body = body.substr(0, body.length - 1);
+                break;
+                
+            default:
+                requestType='default';
+                for( var i = 0; i < nodes.length; i++ ){
+                    var el = nodes[i];var el = nodes[i];
+                    /* Quoted out 2017-11-07, ACF 5.6.5 */
+                    //body += encodeURIComponent("acf_export_keys[]") + "=" + el + "&";
+                    body += encodeURIComponent(self.getSelector('_keysUriComponent')) + "=" + el + "&";
+                    self.log('adding post #' + el);
+                }
+                break;
         }
+        
+        console.log('request-type on buildAcfExportFormbody: ' + requestType);
 
-		if( self.exportJson === true ){
+    	if( self.exportJson === true ){
             if (self.acfVersion[0] >= 5 
             && (self.acfVersion[1] >= 6) 
             && (self.acfVersion[2] >= 5)) { // ACF 5.6.5+ (2017-11-07)
