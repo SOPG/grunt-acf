@@ -59,6 +59,14 @@ module.exports = function( opts, gruntContext, TaskContext )
 
 	// shortcut to console log
 	this.log = grunt.log.writeln;
+        this.warn=function(msg)
+        {
+            grunt.log.writeln('warning: ' ['red'].bold + msg ['red'].inverse);
+        };
+        this.success=function(msg)
+        {
+            grunt.log.writeln(msg ['green'].inverse);
+        };
 
 	// some internal state & properties
 	this.isLoggedIn = false;
@@ -357,10 +365,15 @@ module.exports = function( opts, gruntContext, TaskContext )
                         && (self.acfVersion[1] >= 6)
                         && (self.acfVersion[2] >= 5)
                         && (self.exportJson === true)):
+                    // ACF >= 5.7.0 (2018-07-12) for JSON only
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 7)
+                        && (self.acfVersion[2] >= 0)
+                        && (self.exportJson === true)):
                     //default as well
                     default:
                         
-                        requestType='>=5.6.5::json, default';
+                        requestType='>=5.6.5::json, resp. default';
                         self.agent.post(self.getFormUrl())
                         .type('form')
                         .send(self.acfFormBody)
@@ -371,6 +384,10 @@ module.exports = function( opts, gruntContext, TaskContext )
                     case ((self.acfVersion[0] >= 5)
                         && (self.acfVersion[1] >= 6)
                         && (self.acfVersion[2] >= 5)):
+                    // ACF >= 5.7.0 (2018-07-12)
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 7)
+                        && (self.acfVersion[2] >= 0)):
                         
                         requestType='>=5.6.5';
                         self.agent.post(self.getFormUrl() + '&' + self.acfFormBody)
@@ -429,7 +446,10 @@ module.exports = function( opts, gruntContext, TaskContext )
 		var deferred = Q.defer();
 		deferred.resolve();
 		self.log( 'writing to file: ' + task.files[0].dest );
-		self.log( 'wrote ' + self.exportContent.split('\n').length + ' lines' );
+		self.success( 'wrote ' + self.exportContent.split('\n').length + ' lines' );
+                if(self.exportContent.split('\n').length<=0) {
+                    self.warn('no lines written');
+                }
 		grunt.file.write(task.files[0].dest, self.exportContent);
 
 		return deferred.promise;
@@ -451,33 +471,33 @@ module.exports = function( opts, gruntContext, TaskContext )
 			throw self.errors.couldNotParseVersion;
 		}
 
-		var url = '';
-
-        // 5.6.5+ (2017-11-07)
-        if (parseInt(self.acfVersion[0]) >= 5 
-        && (parseInt(self.acfVersion[1]) >= 6) 
-        && (parseInt(self.acfVersion[2]) >= 5)) {
-            url = '' + self.origin + self.routes.acfToolsForm565;
-        }
+		var url;
         
-		// 5.3 - 5.6.4
-        if (parseInt(self.acfVersion[0]) === 5 
-        && (parseInt(self.acfVersion[1]) <= 6) 
-        && (parseInt(self.acfVersion[1]) >= 3) 
-        && ((parseInt(self.acfVersion[2]) < 5 && parseInt(self.acfVersion[1]) === 6) || (parseInt(self.acfVersion[1]) < 6))) {            
-            url = '' + self.origin + self.routes.acfToolsForm;
-        }
+                switch(true) {
+                    // 5.3 - 5.6.4
+                    case ((parseInt(self.acfVersion[0]) === 5)
+                        && (parseInt(self.acfVersion[1]) <= 6) 
+                        && (parseInt(self.acfVersion[1]) >= 3) 
+                        && ((parseInt(self.acfVersion[2]) < 5 && parseInt(self.acfVersion[1]) === 6) || (parseInt(self.acfVersion[1]) < 6))):
+                        url = '' + self.origin + self.routes.acfToolsForm;
+                        break;
 
-		// 5.0 - 5.2
-		if (parseInt(self.acfVersion[0]) === 5 
-        && (parseInt(self.acfVersion[1]) < 3 )) {
-			url = '' + self.origin + self.routes.acfForm;
-		}
+                    // 5.0 - 5.2
+                    case ((parseInt(self.acfVersion[0]) === 5)
+                        && (parseInt(self.acfVersion[1]) <= 2 )):
+                        url = '' + self.origin + self.routes.acfForm;
+                        break;
+                        
+                    // <5.0 legacy url
+                    case (self.acfVersion[0] < 5):
+                        url = self.origin + self.routes.legacyAcfForm;
+                        break;
 
-		// <5.0 legacy url
-		if( self.acfVersion[0] < 5 ){
-			url = self.origin + self.routes.legacyAcfForm;
-		}
+                    //current, default
+                    default:
+                        url = '' + self.origin + self.routes.acfToolsForm565;
+                        break;
+                }
         
 		return url;
 	};
@@ -592,9 +612,15 @@ module.exports = function( opts, gruntContext, TaskContext )
         //trigger for request dependend of version, export-type
         var requestType;
         switch(true) {
-            case ((self.acfVersion[0] >= 5) // ACF>=5.6.10 (2018-04-02) for JSON only
+            // ACF>=5.6.10 (2018-04-02) for JSON only
+            case ((self.acfVersion[0] >= 5)
                 && (self.acfVersion[1] >= 6)
                 && (self.acfVersion[2] >= 5)
+                && (self.exportJson === true)):
+            // ACF>=5.7.0 (2018-07-12) for JSON only
+            case ((self.acfVersion[0] >= 5)
+                && (self.acfVersion[1] >= 7)
+                && (self.acfVersion[2] >= 0)
                 && (self.exportJson === true)):
                 
                 requestType='>=5.6.5::json';
@@ -607,9 +633,14 @@ module.exports = function( opts, gruntContext, TaskContext )
                 body = body.substr(0, body.length - 1);
                 break;
                 
-            case ((self.acfVersion[0] >= 5) // ACF>=5.6.5 (2017-11-07)
+            // ACF>=5.6.5 (2017-11-07) php export
+            case ((self.acfVersion[0] >= 5)
                 && (self.acfVersion[1] >= 6)
                 && (self.acfVersion[2] >= 5)):
+            // ACF>=5.7.0 (2018-07-12) php export
+            case ((self.acfVersion[0] >= 5)
+                && (self.acfVersion[1] >= 7)
+                && (self.acfVersion[2] >= 0)):
 
                 requestType='>=5.6.5';
                 body += 'keys=';
@@ -636,9 +667,16 @@ module.exports = function( opts, gruntContext, TaskContext )
         console.log('request-type on buildAcfExportFormbody: ' + requestType);
 
     	if( self.exportJson === true ){
-            if (self.acfVersion[0] >= 5 
-            && (self.acfVersion[1] >= 6) 
-            && (self.acfVersion[2] >= 5)) { // ACF 5.6.5+ (2017-11-07)
+            if(
+                    // ACF 5.6.5+ (2017-11-07)
+                    (self.acfVersion[0] >= 5 
+                    && (self.acfVersion[1] >= 6) 
+                    && (self.acfVersion[2] >= 5)) 
+                    // ACF 5.7.0+ (2018-07-12)  
+                    || (self.acfVersion[0] >= 5 
+                    && (self.acfVersion[1] >= 7) 
+                    && (self.acfVersion[2] >= 0))
+            ) { 
                 
                 body += "&action=download";
                 
@@ -685,10 +723,17 @@ module.exports = function( opts, gruntContext, TaskContext )
                     break;
                     
                 case '_field_groups':
-                    // >= 5.6.5 (2017-11-07)
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] >= 5)) {
+                    
+                    if(
+                            // >= 5.6.5 (2017-11-07)
+                            (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 6)
+                            && (self.acfVersion[2] >= 5))
+                            // >= 5.7.0 (2018-07-12)
+                            || (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 7)
+                            && (self.acfVersion[2] >= 0))
+                    ) {
                         identifier = '.acf-fields input[name="keys[]"]';
                     }
                     // <= 5.6.4
@@ -700,10 +745,17 @@ module.exports = function( opts, gruntContext, TaskContext )
                     break;
                  
                 case '_generate':
-                    // >= 5.6.5 (2017-11-07)
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] >= 5)) {
+                    
+                    if(
+                            // >= 5.6.5 (2017-11-07)
+                            (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 6)
+                            && (self.acfVersion[2] >= 5))
+                            // >= 5.7.0 (2018-07-12)
+                            || (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 7)
+                            && (self.acfVersion[2] >=0))
+                    ) {
                         identifier = 'button[name="action"][value="generate"]';
                     }
 
@@ -716,10 +768,16 @@ module.exports = function( opts, gruntContext, TaskContext )
                     break;
                     
                 case '_keysUriComponent':
-                    // >= 5.6.5 (2017-11-07)
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] >= 5)) {
+                    if(
+                            // >= 5.6.5 (2017-11-07)
+                            (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 6)
+                            && (self.acfVersion[2] >= 5))
+                            // >= 5.7.0 (2018-07-12)
+                            || (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 7)
+                            && (self.acfVersion[2] >=0))
+                    ) {
                         identifier = 'keys[]';
                     }
                     // <= 5.6.4
@@ -731,10 +789,16 @@ module.exports = function( opts, gruntContext, TaskContext )
                     break;
                 case '_exportUriComponent':
                     
-                    // >= 5.6.5 (2017-11-07)
-                    if (self.acfVersion[0] >= 5
-                    && (self.acfVersion[1] >= 6)
-                    && (self.acfVersion[2] >= 5)) {
+                    if(
+                            // >= 5.6.5 (2017-11-07)
+                            (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 6)
+                            && (self.acfVersion[2] >= 5))
+                            // >= 5.7.0 (2018-07-12)
+                            || (self.acfVersion[0] >= 5
+                            && (self.acfVersion[1] >= 7)
+                            && (self.acfVersion[2] >=0))
+                    ) {
                         if (false === self.exportJson) {
                             identifier = '&tool=export&';
                         } else {
