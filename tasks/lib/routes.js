@@ -630,7 +630,6 @@ module.exports = function( opts, gruntContext, TaskContext )
                     body += '&keys%5B%5D=' + el;
                     self.log('adding post #' + el);
                 }
-                body = body.substr(0, body.length - 1);
                 break;
                 
             // ACF>=5.6.5 (2017-11-07) php export
@@ -649,6 +648,7 @@ module.exports = function( opts, gruntContext, TaskContext )
                     body += el + "+";
                     self.log('adding post #' + el);
                 }
+                //rm last "+" sign
                 body = body.substr(0, body.length - 1);
                 break;
                 
