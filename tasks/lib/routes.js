@@ -163,16 +163,16 @@ module.exports = function( opts, gruntContext, TaskContext )
 		.set('Origin', self.origin)
 		.set('Referer', self.origin + self.routes.login)
 		.end(function(err, res){
-
 			var $ = cheerio.load(res.text),
 				legacyAcf = $('#advanced-custom-fields .plugin-version-author-uri, [data-slug="advanced-custom-fields-pro"] .plugin-version-author-uri').text(),
-				currentAcf = $('#advanced-custom-fields-pro .plugin-version-author-uri, [data-slug="advanced-custom-fields"] .plugin-version-author-uri').text();
+				currentAcf = $('#advanced-custom-fields-pro .plugin-version-author-uri, [data-slug="advanced-custom-fields"] .plugin-version-author-uri, [data-slug="advanced-custom-fields-pro"] .plugin-version-author-uri').text();
 
 			if( 0 === currentAcf.length && 0 === legacyAcf.length ){
 				throw self.errors.pluginNotInstalled;
 			}
 
 			if( currentAcf.length ){
+
 				self.acfVersion = self.parseAcfVersionNumber( currentAcf );
 			}else{
 				self.acfVersion = self.parseAcfVersionNumber( legacyAcf );
@@ -223,6 +223,7 @@ module.exports = function( opts, gruntContext, TaskContext )
 		.set('Referer', self.origin + self.routes.login)
 		.end(function(err, res){
 			if(err) throw err;
+			var $ = cheerio.load(res.text);
 
 			var $ = cheerio.load(res.text),
 				nonce = $('input[name="' + self.getSelector('_acfnonce') + '"]'),
@@ -336,7 +337,7 @@ module.exports = function( opts, gruntContext, TaskContext )
         var fnCallback = function(err, res)
         {
 			if(err) throw err;
-            
+
 			var $ = cheerio.load(res.text);
 			var textarea = $('#wpbody-content textarea');
             
@@ -370,6 +371,10 @@ module.exports = function( opts, gruntContext, TaskContext )
                         && (self.acfVersion[1] >= 7)
                         && (self.acfVersion[2] >= 0)
                         && (self.exportJson === true)):
+					// ACF >= 5.11 (2021-11-22) for JSON only
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 11)
+                        && (self.exportJson === true)):
                     //default as well
                     default:
                         
@@ -388,7 +393,10 @@ module.exports = function( opts, gruntContext, TaskContext )
                     case ((self.acfVersion[0] >= 5)
                         && (self.acfVersion[1] >= 7)
                         && (self.acfVersion[2] >= 0)):
-                        
+                    // ACF >= 5.7.0 (2018-07-12)
+                    case ((self.acfVersion[0] >= 5)
+                        && (self.acfVersion[1] >= 11)):
+
                         requestType='>=5.6.5';
                         self.agent.post(self.getFormUrl() + '&' + self.acfFormBody)
                         .type('form')           
@@ -581,9 +589,11 @@ module.exports = function( opts, gruntContext, TaskContext )
 	 */
 	this.parseAcfVersionNumber = function( text )
 	{
-		var matched = text.match(/\d+\.\d+\.\d+/);
-		
-		if( matched.length > 0 && 3 === matched[0].split('.').length ){
+		//var matched = text.match(/\d+\.\d+\.\d+/);
+		var matched = text.match(/\d+\.\d+\.*\d+/);
+
+		//if( matched.length > 0 && 3 === matched[0].split('.').length ){
+		if( matched.length > 0 && (3 === matched[0].split('.').length || 2 === matched[0].split('.').length)){
 			return matched[0].split('.');
 		}
 		self.log('could find version number in string: "' + text + '"');
@@ -733,6 +743,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                             || (self.acfVersion[0] >= 5
                             && (self.acfVersion[1] >= 7)
                             && (self.acfVersion[2] >= 0))
+							// >= 5.11 (2021-11-22)
+							|| (self.acfVersion[0] >= 5
+							&& (self.acfVersion[1] >= 11))
                     ) {
                         identifier = '.acf-fields input[name="keys[]"]';
                     }
@@ -755,6 +768,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                             || (self.acfVersion[0] >= 5
                             && (self.acfVersion[1] >= 7)
                             && (self.acfVersion[2] >=0))
+							// >= 5.11 (2021-11-22)
+							|| (self.acfVersion[0] >= 5
+							&& (self.acfVersion[1] >= 11))
                     ) {
                         identifier = 'button[name="action"][value="generate"]';
                     }
@@ -777,6 +793,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                             || (self.acfVersion[0] >= 5
                             && (self.acfVersion[1] >= 7)
                             && (self.acfVersion[2] >=0))
+							// >= 5.11 (2021-11-22)
+							|| (self.acfVersion[0] >= 5
+							&& (self.acfVersion[1] >= 11))
                     ) {
                         identifier = 'keys[]';
                     }
@@ -798,6 +817,9 @@ module.exports = function( opts, gruntContext, TaskContext )
                             || (self.acfVersion[0] >= 5
                             && (self.acfVersion[1] >= 7)
                             && (self.acfVersion[2] >=0))
+							// >= 5.11 (2021-11-22)
+							|| (self.acfVersion[0] >= 5
+							&& (self.acfVersion[1] >= 11))
                     ) {
                         if (false === self.exportJson) {
                             identifier = '&tool=export&';
