@@ -650,6 +650,10 @@ module.exports = function( opts, gruntContext, TaskContext )
             case ((self.acfVersion[0] >= 5)
                 && (self.acfVersion[1] >= 7)
                 && (self.acfVersion[2] >= 0)):
+			// ACF 5.12 i.e. no build version (2022-03-11) php export
+			case ((self.acfVersion[1] >= 5)
+				&& (self.acfVersion[1] >= 12)
+				&& (typeof self.acfVersion[2] === 'undefined')):
 
                 requestType='>=5.6.5';
                 body += 'keys=';
