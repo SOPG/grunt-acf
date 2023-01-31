@@ -46,6 +46,19 @@ module.exports = function(opts, gruntContext, TaskContext)
         'legacyAcfForm': '/wp-admin/edit.php?post_type=acf&page=acf-export'
     };
 
+    /**
+     * add subdirectory if given
+     * 
+     * @date 2023-01-31
+     * @jira SZXE-12
+     * @author sh@sopg.de
+     */
+    if(typeof this.options.subdir === 'string') {
+        for(var [key, value] of Object.entries(this.routes)) {
+            this.routes[key] = this.options.subdir + value;
+        }
+    }
+
     // object containing static error messages
     this.errors = {
         'missingContext': 'Options are incomplete or grunt-context is missing',
