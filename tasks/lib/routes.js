@@ -64,7 +64,7 @@ function acfExport(oOpts, gruntContext, TaskContext)
     };
 
     /**
-     * Logs into wordpress.
+     * Log into wordpress.
      */
     this.login = async () => 
     {
