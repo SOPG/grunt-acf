@@ -13,7 +13,9 @@ function acfExport(oOpts, gruntContext, TaskContext)
 
     this.oOptions = oOpts || {};
     this.oAgent = superagent.agent();
-    this.sBaseUrl = 'http://' + this.oOptions.baseUrl;
+    //enable custom protocol
+    this.protocol = grunt.config().protocol || 'http';
+    this.sBaseUrl = this.protocol + '://' + this.oOptions.baseUrl;
 
     this.oRoutes = {
         'login': '/wp-login.php',
